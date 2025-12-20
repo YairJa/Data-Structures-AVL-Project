@@ -33,17 +33,25 @@ class AVLNode(object):
         # gets a root and return the minimal node in this subtree
         # time complexity O(self.height) = O(logn)
         current = self
-        while current.left.is_real_node():
-            current = current.left
-        return current
+        if(current.is_real_node()):
+
+            while current.left.is_real_node():
+                current = current.left
+            return current
+        else:
+            return current
 
     def findMax(self):
         # gets a root and return the maximal node in this subtree
         # time complexity O(self.height) = O(logn)
         current = self
-        while current.right.is_real_node():
-            current = current.right
-        return current
+        if(current.is_real_node()):
+            while current.right.is_real_node():
+                current=current.right
+            return current
+        else:
+            return current
+
 
     """returns whether self is not a virtual node 
 
@@ -55,10 +63,6 @@ class AVLNode(object):
         # time complexity O(1)
         return not self.isVirtual
 
-    def __repr__(self):
-        if not self.is_real_node():
-            return "(:)"  # Small symbol for virtual nodes if they ever print
-        return f"[{self.key, self.height}]"  # Simplified for cleaner tree look
 
 
 """
@@ -81,13 +85,12 @@ class AVLTree(object):
         self.Treesize = 0
 
     def createByRoot(self, rootNode):
-        ## assumes self is an empty AVL tree, size field invariant isnt correct after calling this method
-        ## time complexity O(self.height) = O(logn) for using findMin,findMax
-        if (rootNode.is_real_node()):
+    # specific helper function for split
+    ## assumes self is an empty AVL tree, updating only its root to rootNode
+    ## time complexity O(1)
+        if(rootNode.is_real_node()):
             self.root = rootNode
             self.root.parent = self.virtual
-            self.min = rootNode.findMin()
-            self.max = rootNode.findMax()
 
     """searches for a node in the dictionary corresponding to the key (starting at the root)
 
@@ -465,7 +468,7 @@ class AVLTree(object):
                 self.root, self.max, self.min = x, x, x
 
         x.updateHeight()
-        self.rotationsCheck(x.parent, 55, False)  # balancing the tree
+        self.rotationsCheck(x.parent, 0, False)  # balancing the tree
 
         return
 
@@ -479,13 +482,15 @@ class AVLTree(object):
 
             x.height = 0
             if x.key > big.root.key:  # insert x as big new maximal node
-                x.parent = big.max
-                big.max.right = x
+                maxNode = big.root.findMax()
+                x.parent = maxNode
+                maxNode.right = x
                 self.max = x  # adjusting self fields accordingly
                 self.min = big.min
             else:  # insert x as big new minimal node
-                x.parent = big.min
-                big.min.left = x
+                minNode = big.root.findMin()
+                x.parent = minNode
+                minNode.left = x
                 self.min = x  ## adjusting self fields accordingly
                 self.max = big.max
         elif big.root.key > x.key:  # means small will be in his left subtree
@@ -517,10 +522,10 @@ class AVLTree(object):
             self.max = small.max
             x.right = small.root
             small.root.parent = x
-            while (current.height > hSmall) and (current.right.is_real_node):
+            while (current.height > hSmall) and (current.right.is_real_node()):
                 # reaching the same height subtree root
                 current = current.right
-            if (current.height > hSmall):  ## special case, small height<=0, big.min has right child,
+            if current.height > hSmall:  ## special case, small height<=0, big.min has right child,
                 # avoiding arrival to virtual node
                 current.right = x
                 x.parent = current
@@ -528,6 +533,7 @@ class AVLTree(object):
             else:
                 x.left = current
                 x.parent = current.parent
+
                 if current.parent.is_real_node():
                     current.parent.right = x
                 current.parent = x
@@ -544,7 +550,7 @@ class AVLTree(object):
     """
 
     def split(self, node):
-        # delete node from the tree and return two subtress , one bigger one smaller
+        # delete node from the tree and return two subtress , one bigger values, other smaller values
         # size field invariant isnt correct after calling this method
         # time complexity O(logn)
         smallerTree = AVLTree()
@@ -555,14 +561,19 @@ class AVLTree(object):
 
             uniteTree = AVLTree()
             if (node.parent.right is node):  # smaller  values tree Accumulation
+
                 uniteTree.createByRoot(node.parent.left)
+
                 smallerTree.join(uniteTree, node.parent.key, node.parent.value)
             else:  # bigger values tree Accumulation
                 uniteTree.createByRoot(node.parent.right)
                 biggerTree.join(uniteTree, node.parent.key, node.parent.value)
 
             node = node.parent
-
+        smallerTree.max = smallerTree.root.findMax()
+        smallerTree.min = smallerTree.root.findMin()
+        biggerTree.max = biggerTree.root.findMax()
+        biggerTree.min = biggerTree.root.findMin()
         return smallerTree, biggerTree
 
     """returns an array representing dictionary 
